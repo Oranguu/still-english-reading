@@ -15,7 +15,7 @@
 └── tool/               # 本仓库
 ```
 
-macOS 双击 `start.command`；Windows 双击 `start.cmd`。首次启动安装依赖，随后构建并在浏览器打开本地页面。终端窗口需要保持运行，按 Ctrl+C 关闭服务。
+macOS 双击 `start.command`，会自动唤起 Google Chrome 并打开阅读页面；Windows 双击 `start.cmd`，使用默认浏览器。首次启动会安装依赖并构建。若阅读服务已经运行，再次双击会直接打开已有页面。终端窗口需要保持运行，按 Ctrl+C 关闭服务。
 
 也可在 `tool` 目录运行：
 
