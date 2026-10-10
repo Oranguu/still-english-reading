@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -63,6 +63,7 @@ export default function App() {
   const [loadError, setLoadError] = useState("");
   const [toast, setToast] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
+  const helpDialog = useRef<HTMLDialogElement>(null);
   const [lastRead, setLastRead] = useState(
     storage.get("still:last-read") || "",
   );
@@ -123,6 +124,16 @@ export default function App() {
   }
   const connected = status?.available && status?.authenticated;
 
+  useEffect(() => {
+    const dialog = helpDialog.current;
+    if (!dialog) return;
+    if (helpOpen && !dialog.open) dialog.showModal();
+    else if (!helpOpen && dialog.open) dialog.close();
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [helpOpen]);
+
   return (
     <div className={`app ${activeBook ? "app-reading" : ""}`}>
       {!activeBook && (
@@ -177,7 +188,11 @@ export default function App() {
               <span>本地阅读，安心收藏</span>
             </div>
             <small>书籍与学习记录保存在本机</small>
-            <button className="quiet-button" onClick={() => setHelpOpen(true)}>
+            <button
+              className="quiet-button"
+              aria-haspopup="dialog"
+              onClick={() => setHelpOpen(true)}
+            >
               <CircleHelp size={15} /> 使用说明 <ArrowRight size={14} />
             </button>
           </div>
@@ -190,22 +205,36 @@ export default function App() {
               我的空间 <span>/</span>
               <strong>{view === "library" ? "书库" : "复习"}</strong>
             </div>
-            <button
-              className="connection-pill"
-              onClick={() => {
-                setStatusOpen(!statusOpen);
-                if (!statusOpen) loadStatus();
-              }}
-              aria-expanded={statusOpen}
-            >
-              <span className={`status-dot ${connected ? "connected" : ""}`} />
-              {connected
-                ? "Codex 已连接"
-                : status
-                  ? "Codex 未就绪"
-                  : "连接 Codex…"}
-              <ChevronDown size={13} />
-            </button>
+            <div className="topbar-actions">
+              <button
+                className="help-pill"
+                aria-haspopup="dialog"
+                onClick={() => {
+                  setStatusOpen(false);
+                  setHelpOpen(true);
+                }}
+              >
+                <CircleHelp size={14} /> 使用说明
+              </button>
+              <button
+                className="connection-pill"
+                onClick={() => {
+                  setStatusOpen(!statusOpen);
+                  if (!statusOpen) loadStatus();
+                }}
+                aria-expanded={statusOpen}
+              >
+                <span
+                  className={`status-dot ${connected ? "connected" : ""}`}
+                />
+                {connected
+                  ? "Codex 已连接"
+                  : status
+                    ? "Codex 未就绪"
+                    : "连接 Codex…"}
+                <ChevronDown size={13} />
+              </button>
+            </div>
           </header>
         )}
         {statusOpen && (
@@ -305,70 +334,81 @@ export default function App() {
           </button>
         </div>
       )}
-      {helpOpen && (
-        <div className="modal-backdrop" onClick={() => setHelpOpen(false)}>
-          <section
-            className="help-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="help-title"
-            onClick={(event) => event.stopPropagation()}
+      <dialog
+        className="help-dialog"
+        ref={helpDialog}
+        aria-labelledby="help-title"
+        onCancel={() => setHelpOpen(false)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setHelpOpen(false);
+        }}
+      >
+        <section
+          className="help-modal"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            className="icon-button modal-close"
+            aria-label="关闭说明"
+            onClick={() => setHelpOpen(false)}
           >
-            <button
-              className="icon-button modal-close"
-              aria-label="关闭说明"
-              onClick={() => setHelpOpen(false)}
-            >
-              <X size={20} />
-            </button>
-            <span className="eyebrow">MAKE YOURSELF AT HOME</span>
-            <h2 id="help-title">慢慢读，慢慢积累。</h2>
-            <div className="help-step">
-              <span>01</span>
-              <div>
-                <h3>把书放进 source 文件夹</h3>
-                <p>
-                  支持 PDF、EPUB 和
-                  Markdown，也会读取子文件夹。放好后点击「刷新书库」。
-                </p>
-              </div>
-            </div>
-            <div className="help-step">
-              <span>02</span>
-              <div>
-                <h3>选中文字，读懂每一处</h3>
-                <p>
-                  选中原文会自动打开 AI 解析，可以继续追问。AI 使用本机 Codex
-                  登录账号的额度，需要网络连接。
-                </p>
-              </div>
-            </div>
-            <div className="help-step">
-              <span>03</span>
-              <div>
-                <h3>把值得记住的留下</h3>
-                <p>
-                  收藏单词、短语、句子或解析，在复习卡片中点击展开。收藏保存在工程的
-                  review 文件夹；进度、书签与生成的大纲保存在 source 文件夹。
-                </p>
-              </div>
-            </div>
-            <div className="info-box">
-              <ShieldCheck size={18} />
+            <X size={20} />
+          </button>
+          <span className="eyebrow">MAKE YOURSELF AT HOME</span>
+          <h2 id="help-title">使用说明</h2>
+          <div className="help-step">
+            <span>01</span>
+            <div>
+              <h3>把书放进 source 文件夹</h3>
               <p>
-                日常阅读在本地完成。仅使用 AI 功能时，相关原文与问题会发送给
-                Codex 服务。
+                支持 PDF、EPUB 和
+                Markdown，也会读取子文件夹。放好后点击「刷新书库」。
+                目录可直接跳转；没有目录时可用 AI 生成大纲，图片型 PDF 除外。
               </p>
             </div>
-            <button
-              className="primary-button"
-              onClick={() => setHelpOpen(false)}
-            >
-              开始阅读 <ArrowRight size={16} />
-            </button>
-          </section>
-        </div>
-      )}
+          </div>
+          <div className="help-step">
+            <span>02</span>
+            <div>
+              <h3>用键盘，轻松翻页</h3>
+              <p>
+                <kbd>↑</kbd> 上一页，<kbd>↓</kbd> 下一页。EPUB / Markdown
+                每次移动一屏，到章节边缘再切换章节。输入或选中文字时不会触发翻页；书签和阅读进度会自动保存。
+              </p>
+            </div>
+          </div>
+          <div className="help-step">
+            <span>03</span>
+            <div>
+              <h3>选中文字，读懂每一处</h3>
+              <p>
+                选中原文会自动打开 AI 解析，可以继续追问。AI 使用本机 Codex
+                登录账号的额度，需要网络连接。
+              </p>
+            </div>
+          </div>
+          <div className="help-step">
+            <span>04</span>
+            <div>
+              <h3>把值得记住的留下</h3>
+              <p>
+                收藏单词、短语、句子或解析，在复习卡片中点击展开。收藏保存在工程的
+                review 文件夹；进度、书签与生成的大纲保存在 source 文件夹。
+              </p>
+            </div>
+          </div>
+          <div className="info-box">
+            <ShieldCheck size={18} />
+            <p>
+              日常阅读在本地完成。仅使用 AI 功能时，相关原文与问题会发送给 Codex
+              服务。
+            </p>
+          </div>
+          <button className="primary-button" onClick={() => setHelpOpen(false)}>
+            开始阅读 <ArrowRight size={16} />
+          </button>
+        </section>
+      </dialog>
     </div>
   );
 }

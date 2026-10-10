@@ -1,6 +1,6 @@
 # still-english-reading
 
-一个运行在本机的英文阅读与学习工具。中文操作界面，支持 PDF、EPUB、Markdown；选中文字即可用本机 Codex 解析，继续追问，并保存到复习库。
+一个采用 MIT 许可证开源、运行在本机的英文阅读与学习工具。中文操作界面，支持 PDF、EPUB、Markdown；选中文字即可用本机 Codex 解析，继续追问，并保存到复习库。
 
 ## 启动
 
@@ -31,9 +31,12 @@ npm run launch
 
 ## 阅读和学习
 
+首页右上角的「使用说明」可打开简明教程，支持点击关闭、点击框外或按 Esc 关闭。
+
 - **书库**：按书名搜索、按格式筛选；继续上次阅读。
 - **阅读**：原生 PDF 页面及文字选择层；EPUB 按阅读顺序加载章节；Markdown 保留标题、列表、表格等排版。已有目录自动导入，可跳转章节或页码。
 - **AI 大纲**：书籍没有目录时，可根据有限的文字样本生成并保存大纲。它是辅助性提纲，不保证覆盖每个章节。图片型 PDF 禁用此功能；先在本地做 OCR 后再使用。
+- **键盘翻页**：阅读时按 `↑` / `↓`。PDF 切换上一页／下一页；EPUB 和 Markdown 向上／下移动一屏，到章节边缘后切换章节。每次按键翻一页，长按不会连续跳页。在输入框、AI 面板、目录控件内操作或选中文字时保留原来的键盘行为，带 Shift / Ctrl / ⌘ / Alt 的组合键也不会触发翻页。
 - **书签**：保存当前页面或章节位置；阅读进度自动保存。
 - **划线解析**：选择英文文字后出现 AI 解析，可继续用中文追问。单次选择上限 6,000 字符，超限时缩小范围。仅请求时发送选中文字、有限上下文及有限追问记录给 Codex。
 - **复习库**：收藏单词、短语、句子或 AI 解析；卡片默认折叠，展开后查看完整内容。可按类型、来源书籍和文本筛选，标记已复习或删除。
@@ -86,3 +89,7 @@ npm run test:e2e  # 浏览器端到端验证：使用临时测试书籍和模拟
 技术组成：React、TypeScript、Vite、Express、PDF.js、JSZip、marked、sanitize-html；不需要数据库服务。依赖锁文件已提交，请使用 `npm ci` 安装一致版本。
 
 Codex 接入依据 [OpenAI Codex app-server 文档](https://developers.openai.com/codex/app-server/) 和 [非交互运行文档](https://developers.openai.com/codex/noninteractive/)。Codex CLI 需在系统 PATH 中可用；macOS 也支持 Codex / ChatGPT 应用内置 CLI。
+
+## 开源许可
+
+工具源码使用 [MIT License](LICENSE)。公开范围仅为 `tool` 内的源码、说明和合成测试素材；`source` 书籍、`review` 学习记录和本地账号配置不属于发布内容。第三方依赖与书籍各自遵循其原有许可。

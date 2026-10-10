@@ -25,3 +25,9 @@ credentials*
 auth.json
 config.toml
 public/pdfjs/
+# Keep ebook files out of the public source repository even if copied here.
+*.epub
+*.pdf
+*.mobi
+*.azw
+*.azw3

@@ -462,6 +462,67 @@ export default function Reader({
       ? navigate({ page: page + direction })
       : navigate({ chapterId: book?.chapters?.[chapterIndex + direction]?.id });
 
+  useEffect(() => {
+    if (loading || !book) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        !["ArrowUp", "ArrowDown"].includes(event.key) ||
+        event.defaultPrevented ||
+        event.repeat ||
+        event.isComposing ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        document.querySelector("dialog[open], [aria-modal='true']") ||
+        window.getSelection()?.isCollapsed === false
+      )
+        return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (
+        target?.closest(
+          "input, textarea, select, [contenteditable], [role='textbox'], [role='combobox'], [role='listbox'], [role='slider'], [role='spinbutton'], .ai-panel, .reader-sidebar, .typography-popover",
+        )
+      )
+        return;
+
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      if (book.format === "pdf") {
+        const nextPage = page + direction;
+        if (nextPage >= 1 && nextPage <= pageCount)
+          navigate({ page: nextPage });
+        return;
+      }
+      const container = scroll.current;
+      if (!container) return;
+      const limit = Math.max(
+        0,
+        container.scrollHeight - container.clientHeight,
+      );
+      const nextTop = Math.max(
+        0,
+        Math.min(
+          limit,
+          container.scrollTop +
+            direction * Math.max(1, container.clientHeight - 48),
+        ),
+      );
+      if (Math.abs(nextTop - container.scrollTop) > 1) {
+        container.scrollTo({ top: nextTop, behavior: "instant" });
+      } else {
+        const nextChapter = book.chapters?.[chapterIndex + direction];
+        if (nextChapter)
+          navigate({
+            chapterId: nextChapter.id,
+            scrollRatio: direction < 0 ? 1 : 0,
+          });
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [book, loading, page, pageCount, chapterIndex, navigate]);
+
   if (loading || error || !book)
     return (
       <div className="reader-loading-screen">

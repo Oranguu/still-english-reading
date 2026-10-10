@@ -936,16 +936,50 @@ a {
   display: block;
   background: #899e6b;
 }
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
+/* Native dialog supplies focus trapping, Escape and focus restoration. */
+.help-dialog {
+  border: 0;
+  padding: 0;
+  margin: auto;
+  background: transparent;
+  color: var(--ink);
+  width: min(530px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  border-radius: 9px;
+}
+.help-dialog::backdrop {
   background: #202c2047;
   backdrop-filter: blur(4px);
-  z-index: 80;
+}
+.topbar-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 25px;
+  gap: 10px;
+}
+.help-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dfe3d5;
+  border-radius: 30px;
+  padding: 8px 12px;
+  color: #657458;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.help-pill:hover {
+  background: #e9eddf;
+}
+.help-step kbd {
+  display: inline-block;
+  padding: 0 6px;
+  margin-right: 2px;
+  border: 1px solid #cad4c0;
+  border-radius: 4px;
+  background: #eef2e8;
+  color: #48563e;
+  font: inherit;
 }
 .help-modal {
   position: relative;
@@ -956,7 +990,7 @@ a {
   border-radius: 9px;
   padding: 43px;
   box-shadow: 0 20px 80px #23342026;
-  max-height: 90vh;
+  max-height: calc(100dvh - 32px);
   overflow: auto;
 }
 .modal-close {
@@ -985,9 +1019,9 @@ a {
   margin-bottom: 8px;
 }
 .help-step p {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.9;
-  color: #8d9781;
+  color: #657458;
 }
 .info-box {
   display: flex;

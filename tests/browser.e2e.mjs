@@ -54,14 +54,19 @@ await fs.writeFile(
   await zip.generateAsync({ type: "nodebuffer" }),
 );
 function pdf(text = "") {
-  const stream = text ? `BT /F1 16 Tf 40 740 Td (${text}) Tj ET` : "";
+  const pages = Array.isArray(text) ? text : [text];
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    `<< /Type /Pages /Kids [${pages.map((_, i) => `${4 + i * 2} 0 R`).join(" ")}] /Count ${pages.length} >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
   ];
+  for (const [i, content] of pages.entries()) {
+    const stream = content ? `BT /F1 16 Tf 40 740 Td (${content}) Tj ET` : "";
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + i * 2} 0 R >>`,
+      `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
+    );
+  }
   let textPdf = "%PDF-1.4\n";
   const offsets = [];
   objects.forEach((value, i) => {
@@ -71,14 +76,15 @@ function pdf(text = "") {
   const xref = Buffer.byteLength(textPdf);
   return (
     textPdf +
-    `xref\n0 6\n0000000000 65535 f \n${offsets.map((v) => String(v).padStart(10, "0") + " 00000 n \n").join("")}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`
+    `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((v) => String(v).padStart(10, "0") + " 00000 n \n").join("")}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`
   );
 }
 await fs.writeFile(
   path.join(sourceDir, "Readable PDF.pdf"),
-  pdf(
+  pdf([
     "Small steps make a difference and help us learn something new every day.",
-  ),
+    "A second page brings a new perspective.",
+  ]),
 );
 await fs.writeFile(path.join(sourceDir, "Scanned PDF.pdf"), pdf());
 const calls = [];
@@ -154,13 +160,39 @@ try {
     path: ".artifacts/library-demo.png",
     fullPage: true,
   });
+  const help = page
+    .locator(".topbar")
+    .getByRole("button", { name: "使用说明" });
+  await help.click();
+  await expect(page.getByRole("dialog", { name: "使用说明" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toContainText("每次移动一屏");
+  await page.screenshot({ path: ".artifacts/help-demo.png", fullPage: true });
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(help).toBeFocused();
   await open("Daily reading");
+  const readingScroll = page.locator(".reading-scroll");
+  await page.keyboard.press("ArrowDown");
+  await expect
+    .poll(() => readingScroll.evaluate((el) => el.scrollTop))
+    .toBeGreaterThan(200);
+  await page.keyboard.press("ArrowUp");
+  await expect.poll(() => readingScroll.evaluate((el) => el.scrollTop)).toBe(0);
+  await page.keyboard.press("ArrowUp");
+  await expect(readingScroll).toBeVisible();
   await expect(page.locator(".outline-list button")).toHaveCount(3);
   await select(".reading-content", "Small steps");
   await expect(page.locator(".assistant-message")).toContainText("产生影响");
   await page.getByLabel("收藏分类").selectOption("phrase");
   await page.locator(".selection-save button").click();
   await expect(page.locator(".selection-save button")).toContainText("已收藏");
+  const beforeTypingScroll = await readingScroll.evaluate((el) => el.scrollTop);
+  await page.getByLabel("向 AI 追问").focus();
+  await page.keyboard.press("ArrowDown");
+  assert.equal(
+    await readingScroll.evaluate((el) => el.scrollTop),
+    beforeTypingScroll,
+  );
   await page.getByLabel("向 AI 追问").fill("difference 在这里是什么意思？");
   await page.getByRole("button", { name: "发送追问" }).click();
   await expect(page.locator(".assistant-message").last()).toContainText(
@@ -199,6 +231,18 @@ try {
   await page.screenshot({ path: ".artifacts/review-demo.png", fullPage: true });
   await page.getByRole("button", { name: /我的书库/ }).click();
   await open("A Little Reading");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator(".reading-content")).toContainText(
+    "Every page brings a new idea.",
+  );
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator(".reading-content")).toContainText(
+    "Every page brings a new idea.",
+  );
+  await page.keyboard.press("ArrowUp");
+  await expect(page.locator(".reading-content")).toContainText(
+    "Reading opens a window to the world.",
+  );
   await page.locator(".outline-list button").last().click();
   await expect(page.locator(".reading-content")).toContainText(
     "Every page brings a new idea.",
@@ -215,6 +259,20 @@ try {
   await select(".textLayer", "Small steps");
   await expect(page.locator(".assistant-message")).toBeVisible();
   await page.getByRole("button", { name: "关闭 AI 解析" }).click();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByLabel("跳转页码")).toHaveValue("2");
+  await expect(page.locator(".textLayer")).toContainText("A second page");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByLabel("跳转页码")).toHaveValue("2");
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByLabel("跳转页码")).toHaveValue("1");
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByLabel("跳转页码")).toHaveValue("1");
+  await page.keyboard.press("Shift+ArrowDown");
+  await expect(page.getByLabel("跳转页码")).toHaveValue("1");
+  await page.getByLabel("跳转页码").focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(page.locator(".paper-meta")).toContainText("1 / 2");
   await back();
   await open("Scanned PDF");
   await expect(
@@ -229,6 +287,13 @@ try {
     ),
     "No mobile horizontal overflow",
   );
+  await page
+    .locator(".topbar")
+    .getByRole("button", { name: "使用说明" })
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "关闭说明" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   assert.equal(errors.length, 0, errors.join("\n"));
   const reviews = JSON.parse(
     await fs.readFile(path.join(reviewDir, "items.json"), "utf8"),
@@ -236,7 +301,7 @@ try {
   assert.equal(reviews.length, 1);
   assert.ok(reviews[0].reviewedAt);
   console.log(
-    "PASS: library, EPUB, Markdown, PDF text selection, AI follow-up, outline, same-chapter bookmark restore, collapsed review cards, categories, disk persistence and mobile layout",
+    "PASS: keyboard pages/screens, chapter boundaries, input protection, accessible desktop/mobile help, library, EPUB, Markdown, PDF text selection, AI follow-up, outline, same-chapter bookmark restore, collapsed review cards, categories, disk persistence and mobile layout",
   );
 } catch (error) {
   await page.screenshot({
